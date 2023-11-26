@@ -21,7 +21,7 @@ class OrderController extends Controller
         // Set your Merchant Server Key
         \Midtrans\Config::$serverKey = config("midtrans.server_key");
         // Set to Development/Sandbox Environment (default). Set to true for Production Environment (accept real transaction).
-        \Midtrans\Config::$isProduction = false;
+        \Midtrans\Config::$isProduction = config("midtrans.is_production");
         // Set sanitization on (default)
         \Midtrans\Config::$isSanitized = true;
         // Set 3DS transaction for credit card to true
@@ -33,7 +33,8 @@ class OrderController extends Controller
                 'gross_amount' => $order->total_price,
             ),
             'customer_details' => array(
-                'name' => $order->name,
+                'first_name' => $order->name,
+                'last_name' => '',
                 'phone' => $order->phone,
             ),
         );
@@ -50,7 +51,7 @@ class OrderController extends Controller
         $hashed = hash('sha512', $request->order_id . $request->status_code . $request->gross_amount . config("midtrans.server_key"));
 
         if ($request->order_id && $hashed === $request->signature_key) {
-            if ($fraud === "accept" && $transaction_status === "capture") {
+            if ($fraud === "accept" && $transaction_status === "capture" || $transaction_status === "settlement") {
                 $order = Order::find($request->order_id);
                 $order->update(["status" => "Paid"]);
             } else {
