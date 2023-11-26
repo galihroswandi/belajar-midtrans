@@ -42,4 +42,28 @@ class OrderController extends Controller
 
         return view("checkout", compact("snapToken", "order"));
     }
+
+    public function callback(Request $request)
+    {
+        $transaction_status = $request->transaction_status;
+        $fraud = $request->fraud_status;
+        $hashed = hash('sha512', $request->order_id . $request->status_code . $request->gross_amount . config("midtrans.server_key"));
+
+        if ($request->order_id && $hashed === $request->signature_key) {
+            if ($fraud === "accept" && $transaction_status === "capture") {
+                $order = Order::find($request->order_id);
+                $order->update(["status" => "Paid"]);
+            } else {
+                $order = Order::find($request->order_id);
+                $order->update(["status" => "Unpaid"]);
+            }
+        }
+    }
+
+    public function invoice($id)
+    {
+        $order = Order::find($id);
+
+        return view("invoice", compact("order"));
+    }
 }
